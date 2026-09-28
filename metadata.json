@@ -1,0 +1,6 @@
+{
+  "name": "Nagar Voice Studio",
+  "description": "Professional NLP Text-to-Speech & Voice Production Studio for YouTube, Hindi, English, Hinglish, documentaries, and ComputerGuruHub narration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
