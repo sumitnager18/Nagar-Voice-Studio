@@ -9,6 +9,7 @@ import { SettingsScreen } from './components/settings/SettingsScreen';
 import { KeyboardShortcutsModal } from './components/settings/KeyboardShortcutsModal';
 import { FirstRunWizard } from './components/settings/FirstRunWizard';
 import { VoiceDNAModal } from './components/voices/VoiceDNAModal';
+import { MediaSuiteScreen } from './components/suite/MediaSuiteScreen';
 
 import { Project } from './types/project';
 import { Voice, VoicePreset } from './types/tts';
@@ -276,6 +277,8 @@ export default function App() {
             onImportProject={handleImportProject}
           />
         )}
+
+        {activeTab === 'suite' && <MediaSuiteScreen />}
 
         {activeTab === 'audio' && (
           <AudioLibraryScreen
