@@ -38,8 +38,7 @@ export interface LocalSpeechResponse {
 
 export class LocalWorkerClient {
   constructor(
-    private readonly baseUrl = (typeof process !== 'undefined' && process.env?.NAGAR_LOCAL_WORKER_URL) ||
-      'http://127.0.0.1:8080'
+    private readonly baseUrl = 'http://127.0.0.1:8080'
   ) {}
 
   private async request<T>(path: string, init?: RequestInit, timeoutMs = 2000): Promise<T> {
