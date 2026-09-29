@@ -259,8 +259,17 @@ function getGeminiClient(): GoogleGenAI | null {
 // -------------------------------------------------------------
 
 // Health Check
-app.get('/api/health', (_req: Request, res: Response) => {
+app.get('/api/health', async (_req: Request, res: Response) => {
   const apiKey = process.env.GEMINI_API_KEY;
+  const localWorkerUrl = process.env.NAGAR_LOCAL_WORKER_URL || 'http://127.0.0.1:8080';
+  let localWorkerAvailable = false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1200);
+    const workerRes = await fetch(`${localWorkerUrl}/health`, { signal: controller.signal });
+    clearTimeout(timer);
+    localWorkerAvailable = workerRes.ok;
+  } catch { localWorkerAvailable = false; }
   const isKeyConfigured = Boolean(apiKey && apiKey.length > 5);
   res.json({
     status: 'ok',
@@ -275,7 +284,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
       { id: 'elevenlabs', name: 'ElevenLabs Reference Target', status: 'reference_only' },
       { id: 'clipchamp_ref', name: 'Clipchamp Reference (CGH Arjun)', status: 'preset_mapped' },
       { id: 'fish_audio_ref', name: 'Fish Audio Reference (CGH Fish)', status: 'reference_only' },
-      { id: 'local', name: 'Local Offline Engine', status: 'available' }
+      { id: 'local', name: 'Local Offline Engine', status: localWorkerAvailable ? 'verified' : 'unavailable', endpoint: localWorkerUrl }
     ]
   });
 });
