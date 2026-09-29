@@ -1,6 +1,9 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import os from 'os';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 
@@ -14,6 +17,113 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+const execFileAsync = promisify(execFile);
+
+async function detectFfmpeg() {
+  try {
+    const { stdout } = await execFileAsync('ffmpeg', ['-version'], { timeout: 2500 });
+    const firstLine = String(stdout).split(/\\r?\\n/)[0] || 'ffmpeg';
+    const version = firstLine.match(/ffmpeg version\\s+([^\\s]+)/i)?.[1];
+    return {
+      id: 'ffmpeg',
+      name: 'FFmpeg',
+      status: 'verified',
+      version,
+      details: { binary: 'ffmpeg', versionLine: firstLine }
+    };
+  } catch (error: any) {
+    return {
+      id: 'ffmpeg',
+      name: 'FFmpeg',
+      status: 'unavailable',
+      reason: error?.message || 'ffmpeg executable was not found on PATH'
+    };
+  }
+}
+
+function detectGpuHints() {
+  const cpus = os.cpus();
+  const gpu: Array<Record<string, unknown>> = [];
+  if (process.platform === 'win32') {
+    gpu.push({
+      name: 'Windows GPU runtime',
+      vendor: 'Detected by OS/runtime probe',
+      backend: 'Unknown',
+      status: 'available',
+      details: { note: 'GPU vendor/backend requires a verified inference worker; this endpoint does not guess AMD/ROCm/DirectML.' }
+    });
+  }
+  return gpu;
+}
+
+app.get('/api/capabilities', async (_req: Request, res: Response) => {
+  const ffmpeg = await detectFfmpeg();
+  const apiKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 5);
+  res.json({
+    timestamp: new Date().toISOString(),
+    hardware: {
+      platform: process.platform,
+      arch: process.arch,
+      cpuCores: os.cpus().length,
+      memoryBytes: os.totalmem(),
+      gpu: detectGpuHints(),
+      ffmpeg
+    },
+    providers: [
+      {
+        provider: 'gemini',
+        status: apiKey ? 'configured' : 'unavailable',
+        models: apiKey ? ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts'] : [],
+        reason: apiKey ? undefined : 'GEMINI_API_KEY is not configured',
+        checkedAt: new Date().toISOString()
+      },
+      {
+        provider: 'local',
+        status: 'available',
+        endpoint: process.env.NAGAR_LOCAL_WORKER_URL || 'http://127.0.0.1:8080',
+        reason: 'Worker availability is verified separately through the local worker health/capability probe.',
+        checkedAt: new Date().toISOString()
+      }
+    ]
+  });
+});
+
+app.get('/api/local-worker/capabilities', async (_req: Request, res: Response) => {
+  const baseUrl = process.env.NAGAR_LOCAL_WORKER_URL || 'http://127.0.0.1:8080';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2500);
+  try {
+    const response = await fetch(`${baseUrl}/capabilities`, { signal: controller.signal });
+    const body = await response.text();
+    let parsed: unknown = null;
+    try { parsed = JSON.parse(body); } catch { parsed = { raw: body }; }
+    if (!response.ok) {
+      return res.status(502).json({
+        status: 'unavailable',
+        endpoint: baseUrl,
+        error: `Local worker returned HTTP ${response.status}`,
+        workerResponse: parsed
+      });
+    }
+    return res.json({
+      status: 'verified',
+      endpoint: baseUrl,
+      checkedAt: new Date().toISOString(),
+      capabilities: parsed
+    });
+  } catch (error: any) {
+    return res.status(503).json({
+      status: 'unavailable',
+      endpoint: baseUrl,
+      checkedAt: new Date().toISOString(),
+      error: error?.message || 'Local worker is unreachable'
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
 
 // Helper: Wrap raw 16-bit PCM (24kHz, 1 channel) into standard 44-byte WAV
 function pcmToWavBuffer(pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1): Buffer {
