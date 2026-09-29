@@ -11,6 +11,7 @@ import { FirstRunWizard } from './components/settings/FirstRunWizard';
 import { VoiceDNAModal } from './components/voices/VoiceDNAModal';
 import { MediaSuiteScreen } from './components/suite/MediaSuiteScreen';
 import { StoryWorkspaceScreen } from './modules/story/StoryWorkspaceScreen';
+import { LipSyncWorkspaceScreen } from './components/lipsync/LipSyncWorkspaceScreen';
 
 import { Project } from './types/project';
 import { Voice, VoicePreset } from './types/tts';
@@ -282,6 +283,8 @@ export default function App() {
         {activeTab === 'suite' && <MediaSuiteScreen />}
 
         {activeTab === 'story' && <StoryWorkspaceScreen />}
+
+        {activeTab === 'lipsync' && <LipSyncWorkspaceScreen />}
 
         {activeTab === 'audio' && (
           <AudioLibraryScreen
