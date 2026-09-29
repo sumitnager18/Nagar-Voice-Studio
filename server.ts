@@ -57,6 +57,45 @@ function detectGpuHints() {
   return gpu;
 }
 
+app.get('/api/suite/capabilities', async (_req: Request, res: Response) => {
+  const localWorkerUrl = process.env.NAGAR_LOCAL_WORKER_URL || 'http://127.0.0.1:8080';
+  const lipSyncUrl = process.env.CGH_LIPSYNC_URL || 'http://127.0.0.1:8000';
+  const probe = async (url: string) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2500);
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      const text = await response.text();
+      let body: unknown = null;
+      try { body = JSON.parse(text); } catch { body = { raw: text }; }
+      return { reachable: response.ok, httpStatus: response.status, body };
+    } catch (error: any) {
+      return { reachable: false, error: error?.message || 'unreachable' };
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  const [local, lipSync] = await Promise.all([
+    probe(`${localWorkerUrl}/capabilities`),
+    probe(`${lipSyncUrl}/api/capabilities`)
+  ]);
+
+  res.json({
+    product: 'Nagar Studio',
+    schemaVersion: '1.0.0',
+    timestamp: new Date().toISOString(),
+    modules: {
+      voice: { status: process.env.GEMINI_API_KEY ? 'configured' : 'unavailable' },
+      localTts: { status: local.reachable ? 'verified' : 'unavailable', endpoint: localWorkerUrl, probe: local },
+      lipSync: { status: lipSync.reachable ? 'verified' : 'unavailable', endpoint: lipSyncUrl, probe: lipSync },
+      storyStudio: { status: 'available', integration: 'adapter' },
+      hindiTts: { status: 'available', integration: 'native-voice-core' },
+      textToAudio: { status: 'available', integration: 'mobile-client' }
+    }
+  });
+});
+
 app.get('/api/capabilities', async (_req: Request, res: Response) => {
   const ffmpeg = await detectFfmpeg();
   const apiKey = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 5);
