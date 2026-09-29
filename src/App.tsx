@@ -10,6 +10,7 @@ import { KeyboardShortcutsModal } from './components/settings/KeyboardShortcutsM
 import { FirstRunWizard } from './components/settings/FirstRunWizard';
 import { VoiceDNAModal } from './components/voices/VoiceDNAModal';
 import { MediaSuiteScreen } from './components/suite/MediaSuiteScreen';
+import { StoryWorkspaceScreen } from './modules/story/StoryWorkspaceScreen';
 
 import { Project } from './types/project';
 import { Voice, VoicePreset } from './types/tts';
@@ -279,6 +280,8 @@ export default function App() {
         )}
 
         {activeTab === 'suite' && <MediaSuiteScreen />}
+
+        {activeTab === 'story' && <StoryWorkspaceScreen />}
 
         {activeTab === 'audio' && (
           <AudioLibraryScreen
