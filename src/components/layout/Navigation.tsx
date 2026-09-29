@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sliders, Mic, FolderArchive, Music, Settings, Activity } from 'lucide-react';
 
-export type NavTab = 'studio' | 'voices' | 'projects' | 'audio' | 'settings';
+export type NavTab = 'studio' | 'voices' | 'projects' | 'audio' | 'suite' | 'settings';
 
 interface NavigationProps {
   activeTab: NavTab;
@@ -19,6 +19,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'voices' as NavTab, label: 'Voice Library', icon: Mic, badge: null },
     { id: 'projects' as NavTab, label: 'Projects', icon: FolderArchive, badge: null },
     { id: 'audio' as NavTab, label: 'Audio Library', icon: Music, badge: null },
+    { id: 'suite' as NavTab, label: 'Media Suite', icon: Activity, badge: null },
     { id: 'settings' as NavTab, label: 'Settings', icon: Settings, badge: null },
   ];
 
